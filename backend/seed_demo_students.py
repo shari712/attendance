@@ -6,7 +6,7 @@ def seed_demo_students():
         {'name': 'Harshini S', 'register_number': 'ES24CJ12', 'department': 'Computer Science', 'email': 'harshini@college.edu', 'year': 3, 'section': 'A'},
         {'name': 'Pooja Sri A', 'register_number': 'ES24CJ15', 'department': 'Computer Science', 'email': 'poojasri@college.edu', 'year': 3, 'section': 'A'},
         {'name': 'Dharani S', 'register_number': 'ES24CJ08', 'department': 'Computer Science', 'email': 'dharani@college.edu', 'year': 3, 'section': 'A'},
-        {'name': 'Lathika Saran M', 'register_number': 'ES24CJ17', 'department': 'Computer Science', 'email': 'lathika@college.edu', 'year': 3, 'section': 'A'}
+        {'name': 'Lalitha Shree', 'register_number': 'ES24CJ17', 'department': 'Computer Science', 'email': 'lathika@college.edu', 'year': 3, 'section': 'A'}
     ]
 
     for s in demo_students:
