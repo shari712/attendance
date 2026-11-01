@@ -68,7 +68,7 @@ const PeriodAttendance: React.FC = () => {
   const scanLockRef = useRef<boolean>(false);
 
   // Pre-loaded student sample directories in public/students
-  const studentKeys = ['student1', 'student2', 'student3', 'student4'];
+  const studentKeys = ['student1', 'student2', 'student3', 'student4', 'student5'];
   const NUM_SAMPLES_PER_STUDENT = 10;
 
   // 1. Fetch live timetable and students list from Supabase
@@ -230,11 +230,12 @@ const PeriodAttendance: React.FC = () => {
       let targetStudent = specificStudent;
       if (!targetStudent) {
         let regNo = '';
-        if (studentKey === 'student1') regNo = 'ES24CJ12'; // Harshini S
-        else if (studentKey === 'student2') regNo = 'ES24CJ15'; // Pooja Sri A
-        else if (studentKey === 'student3') regNo = 'ES24CJ08'; // Dharani S
+        if (studentKey === 'student1' || studentKey.toLowerCase().includes('shari')) regNo = 'STU001'; // Shari
+        else if (studentKey === 'student2' || studentKey.toLowerCase().includes('harshini')) regNo = 'ES24CJ12'; // Harshini S
+        else if (studentKey === 'student3' || studentKey.toLowerCase().includes('pooja')) regNo = 'ES24CJ15'; // Pooja Sri A
         else if (studentKey === 'student4' || studentKey.toLowerCase().includes('lalitha') || studentKey.toLowerCase().includes('lathika')) regNo = 'ES24CJ17'; // Lalitha Shree
-        else if (studentKey === 'student5') regNo = 'STU001'; // Test Student
+        else if (studentKey === 'student5' || studentKey.toLowerCase().includes('kaviya')) regNo = 'ES24CJ20'; // Kaviya
+        else if (studentKey.toLowerCase().includes('dharani')) regNo = 'ES24CJ08'; // Dharani S
 
         if (availableStudents.length > 0 && regNo) {
           targetStudent = availableStudents.find(s => s.register_number === regNo);
@@ -364,11 +365,11 @@ const PeriodAttendance: React.FC = () => {
             const studentKey = matchedStudentKey;
 
             let displayName = studentKey.toUpperCase();
-            if (studentKey === 'student1') displayName = 'Harshini S (ES24CJ12)';
-            else if (studentKey === 'student2') displayName = 'Pooja Sri A (ES24CJ15)';
-            else if (studentKey === 'student3') displayName = 'Dharani S (ES24CJ08)';
+            if (studentKey === 'student1') displayName = 'Shari (STU001)';
+            else if (studentKey === 'student2') displayName = 'Harshini S (ES24CJ12)';
+            else if (studentKey === 'student3') displayName = 'Pooja Sri A (ES24CJ15)';
             else if (studentKey === 'student4') displayName = 'Lalitha Shree (ES24CJ17)';
-            else if (studentKey === 'student5') displayName = 'Test Student (STU001)';
+            else if (studentKey === 'student5') displayName = 'Kaviya (ES24CJ20)';
 
             if (presentStudentsRef.current.has(displayName)) {
               showPopup(`${displayName} is already marked present!`, 'info');

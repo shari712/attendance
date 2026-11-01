@@ -15,7 +15,7 @@ const Attendance: React.FC = () => {
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [scanError, setScanError] = useState<string | null>(null);
 
-  const students = ['student1', 'student2', 'student3', 'student4'];
+  const students = ['student1', 'student2', 'student3', 'student4', 'student5'];
   const NUM_SAMPLES_PER_STUDENT = 10; 
 
   useEffect(() => {
@@ -101,11 +101,11 @@ const Attendance: React.FC = () => {
   const markPresent = async (studentName: string) => {
     let displayName = studentName.toUpperCase();
     let regNo = '';
-    if (studentName === 'student1') { displayName = 'Harshini S (ES24CJ12)'; regNo = 'ES24CJ12'; }
-    else if (studentName === 'student2') { displayName = 'Pooja Sri A (ES24CJ15)'; regNo = 'ES24CJ15'; }
-    else if (studentName === 'student3') { displayName = 'Dharani S (ES24CJ08)'; regNo = 'ES24CJ08'; }
+    if (studentName === 'student1') { displayName = 'Shari (STU001)'; regNo = 'STU001'; }
+    else if (studentName === 'student2') { displayName = 'Harshini S (ES24CJ12)'; regNo = 'ES24CJ12'; }
+    else if (studentName === 'student3') { displayName = 'Pooja Sri A (ES24CJ15)'; regNo = 'ES24CJ15'; }
     else if (studentName === 'student4') { displayName = 'Lalitha Shree (ES24CJ17)'; regNo = 'ES24CJ17'; }
-    else if (studentName === 'student5') { displayName = 'Test Student (STU001)'; regNo = 'STU001'; }
+    else if (studentName === 'student5') { displayName = 'Kaviya (ES24CJ20)'; regNo = 'ES24CJ20'; }
 
     setAttendanceLog((prev) => {
       if (!prev.includes(displayName)) return [...prev, displayName];
