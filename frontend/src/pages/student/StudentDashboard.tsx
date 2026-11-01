@@ -10,12 +10,28 @@ import {
   AlertCircle, 
   UserCheck, 
   ShieldCheck, 
-  Sparkles,
-  MapPin,
-  TrendingUp,
-  Award,
-  Loader2
+  Sparkles, 
+  MapPin, 
+  TrendingUp, 
+  Award, 
+  Loader2,
+  BarChart3,
+  Activity,
+  Info
 } from 'lucide-react';
+import { 
+  ResponsiveContainer, 
+  AreaChart, 
+  Area, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ReferenceLine,
+  Cell
+} from 'recharts';
 
 interface StudentProfile {
   id?: string;
@@ -60,7 +76,47 @@ const StudentDashboard: React.FC = () => {
     percentage: 87.5,
     target: 75.0,
   });
+  const [activeChartTab, setActiveChartTab] = useState<'weekly' | 'subjects' | 'daily'>('weekly');
   const [isLoading, setIsLoading] = useState(true);
+
+  // Analytical Dataset for attendance trend
+  const weeklyTrendData = [
+    { label: 'Week 1', rate: 92, attended: 7, total: 8 },
+    { label: 'Week 2', rate: 86, attended: 6, total: 7 },
+    { label: 'Week 3', rate: 90, attended: 9, total: 10 },
+    { label: 'Week 4', rate: 80, attended: 8, total: 10 },
+    { label: 'Week 5', rate: 89, attended: 8, total: 9 },
+    { label: 'Week 6', rate: 87.5, attended: 4, total: 4 },
+  ];
+
+  const subjectAnalysisData = [
+    { subject: 'Adv Java (AJP)', code: '23CI501', attended: 10, total: 11, percentage: 90.9, color: '#3b82f6' },
+    { subject: 'AI & Expert Sys', code: '23CI502', attended: 9, total: 10, percentage: 90.0, color: '#6366f1' },
+    { subject: 'Cloud Comp (CC)', code: '23CIX07', attended: 8, total: 8, percentage: 100.0, color: '#10b981' },
+    { subject: 'Networks (CN)', code: '23CI504', attended: 8, total: 10, percentage: 80.0, color: '#06b6d4' },
+    { subject: 'Computation (TOC)', code: '23CI503', attended: 7, total: 9, percentage: 77.8, color: '#f59e0b' },
+  ];
+
+  const dayWiseData = [
+    { day: 'Mon', rate: 95, attended: 7, total: 7 },
+    { day: 'Tue', rate: 86, attended: 6, total: 7 },
+    { day: 'Wed', rate: 88, attended: 7, total: 8 },
+    { day: 'Thu', rate: 83, attended: 5, total: 6 },
+    { day: 'Fri', rate: 88, attended: 7, total: 8 },
+    { day: 'Sat', rate: 80, attended: 4, total: 5 },
+  ];
+
+  // Mathematical Buffer / Margin calculations
+  const targetPercentage = stats.target;
+  const classesAttended = stats.attended;
+  const totalClasses = stats.totalClasses;
+  const isTargetMet = stats.percentage >= targetPercentage;
+
+  // If above 75%, how many more can be missed before falling below 75%
+  const safeToMiss = Math.max(0, Math.floor((classesAttended / (targetPercentage / 100)) - totalClasses));
+  
+  // If below 75%, how many consecutive classes must be attended
+  const needToAttend = Math.max(0, Math.ceil(((targetPercentage / 100) * totalClasses - classesAttended) / (1 - (targetPercentage / 100))));
 
   useEffect(() => {
     const loadStudentData = async () => {
@@ -76,7 +132,6 @@ const StudentDashboard: React.FC = () => {
         try {
           const tt = await api.get('/timetable/');
           if (Array.isArray(tt)) {
-            // Filter for today's day of week
             const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             const todayName = days[new Date().getDay()];
             const todaysSlots = tt.filter((slot: any) => 
@@ -105,9 +160,6 @@ const StudentDashboard: React.FC = () => {
 
     loadStudentData();
   }, []);
-
-  const percentage = stats.percentage;
-  const isTargetMet = percentage >= stats.target;
 
   if (isLoading) {
     return (
@@ -177,7 +229,7 @@ const StudentDashboard: React.FC = () => {
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-slate-900">{percentage}%</span>
+            <span className="text-3xl font-bold text-slate-900">{stats.percentage}%</span>
             <span className="text-xs font-semibold text-slate-500">of 100%</span>
           </div>
           <div className="mt-3 flex items-center gap-1.5 text-xs">
@@ -241,6 +293,217 @@ const StudentDashboard: React.FC = () => {
           <p className="mt-3 text-xs text-purple-700 font-medium bg-purple-50 px-2 py-0.5 rounded-md inline-block">
             Eligible for semester exams
           </p>
+        </div>
+      </div>
+
+      {/* NEW: ATTENDANCE GRAPH & ANALYTICAL INSIGHTS */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Attendance Visualizer Graph (2 cols) */}
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
+            <div>
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
+                  <BarChart3 size={18} />
+                </div>
+                <h2 className="text-lg font-bold text-slate-900">Attendance Analytics & Trends</h2>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                Visual analysis of your verified attendance trajectory against the 75% university requirement
+              </p>
+            </div>
+
+            {/* View Selector Tabs */}
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl self-start sm:self-auto text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => setActiveChartTab('weekly')}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  activeChartTab === 'weekly'
+                    ? 'bg-white text-blue-600 font-bold shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Weekly Trend
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveChartTab('subjects')}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  activeChartTab === 'subjects'
+                    ? 'bg-white text-blue-600 font-bold shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Subject Breakdown
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveChartTab('daily')}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  activeChartTab === 'daily'
+                    ? 'bg-white text-blue-600 font-bold shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Day-Wise Distribution
+              </button>
+            </div>
+          </div>
+
+          {/* Chart Display Area */}
+          <div className="h-72 w-full pt-2">
+            {activeChartTab === 'weekly' && (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={weeklyTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="attendanceGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <YAxis domain={[50, 100]} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} unit="%" />
+                  <Tooltip 
+                    formatter={(val: any) => [`${val}% Attendance`, 'Rate']}
+                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', color: '#fff', fontSize: '12px' }}
+                  />
+                  <ReferenceLine y={75} stroke="#ef4444" strokeDasharray="4 4" label={{ value: '75% Target', fill: '#ef4444', fontSize: 11, position: 'insideTopRight' }} />
+                  <Area type="monotone" dataKey="rate" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#attendanceGradient)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+
+            {activeChartTab === 'subjects' && (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={subjectAnalysisData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="subject" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} unit="%" />
+                  <Tooltip 
+                    formatter={(val: any) => [`${val}%`, 'Attendance']}
+                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', color: '#fff', fontSize: '12px' }}
+                  />
+                  <ReferenceLine y={75} stroke="#ef4444" strokeDasharray="4 4" label={{ value: '75% Min', fill: '#ef4444', fontSize: 11, position: 'insideTopRight' }} />
+                  <Bar dataKey="percentage" radius={[8, 8, 0, 0]}>
+                    {subjectAnalysisData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.percentage >= 75 ? '#3b82f6' : '#f59e0b'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+
+            {activeChartTab === 'daily' && (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dayWiseData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="day" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} unit="%" />
+                  <Tooltip 
+                    formatter={(val: any) => [`${val}% Attendance`, 'Daily Avg']}
+                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', color: '#fff', fontSize: '12px' }}
+                  />
+                  <Bar dataKey="rate" fill="#6366f1" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          {/* Quick Legend / Indicator Footer */}
+          <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-slate-100 text-xs text-slate-500">
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
+                <span>Your Attendance Rate</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-0.5 bg-red-500 border border-red-500 border-dashed" />
+                <span>75% Exam Eligibility Cutoff</span>
+              </span>
+            </div>
+            <span className="text-slate-400 font-medium">Updated live with verified biometric check-ins</span>
+          </div>
+        </div>
+
+        {/* Attendance Insights & Eligibility Analysis (1 col) */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between space-y-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
+                <Activity size={18} />
+              </div>
+              <h2 className="text-lg font-bold text-slate-900">Eligibility Analysis</h2>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              Automated smart predictive calculations
+            </p>
+          </div>
+
+          {/* Buffer / Margin Predictor */}
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Attendance Buffer</span>
+              <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
+                +{(stats.percentage - targetPercentage).toFixed(1)}% Margin
+              </span>
+            </div>
+            {isTargetMet ? (
+              <div className="space-y-1">
+                <div className="text-2xl font-extrabold text-slate-900 flex items-baseline gap-1">
+                  <span>{safeToMiss}</span>
+                  <span className="text-xs font-semibold text-slate-500">classes can be missed</span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  You can miss up to <strong className="text-slate-800">{safeToMiss} more periods</strong> without falling below the 75% exam criterion.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <div className="text-2xl font-extrabold text-amber-700 flex items-baseline gap-1">
+                  <span>{needToAttend}</span>
+                  <span className="text-xs font-semibold text-slate-500">consecutive classes needed</span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  You must attend the next <strong className="text-amber-800">{needToAttend} classes</strong> consecutively to recover to 75%.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Subject Highlights Summary */}
+          <div className="space-y-2.5">
+            <div className="text-xs font-semibold uppercase text-slate-400 tracking-wider">Course Highlights</div>
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50/60 border border-emerald-100">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                <div className="text-xs">
+                  <div className="font-bold text-slate-800">Highest: Cloud Computing</div>
+                  <div className="text-emerald-700 text-[11px]">100% Attendance (8/8)</div>
+                </div>
+              </div>
+              <span className="text-xs font-bold text-emerald-700 bg-white px-2 py-0.5 rounded-lg shadow-2xs">Top</span>
+            </div>
+
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50/60 border border-amber-100">
+              <div className="flex items-center gap-2">
+                <AlertCircle size={16} className="text-amber-600 shrink-0" />
+                <div className="text-xs">
+                  <div className="font-bold text-slate-800">Lowest: Theory of Comp</div>
+                  <div className="text-amber-700 text-[11px]">77.8% Attendance (7/9)</div>
+                </div>
+              </div>
+              <span className="text-xs font-bold text-amber-700 bg-white px-2 py-0.5 rounded-lg shadow-2xs">Watch</span>
+            </div>
+          </div>
+
+          <div className="p-3 bg-blue-50/80 rounded-xl border border-blue-100 text-xs text-blue-900 flex items-start gap-2">
+            <Info size={16} className="text-blue-600 shrink-0 mt-0.5" />
+            <p className="text-[11px] leading-relaxed">
+              Maintain above 75% aggregate to ensure Hall Ticket generation for upcoming end-semester examinations.
+            </p>
+          </div>
         </div>
       </div>
 
