@@ -38,7 +38,8 @@ interface ScheduleSlot {
 }
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const periodAttendanceUrl = role === 'CLASS_ADVISOR' ? '/advisor/period-attendance' : '/staff/period-attendance';
   const [stats, setStats] = useState<any>(null);
   const [todaySchedule, setTodaySchedule] = useState<ScheduleSlot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -318,7 +319,7 @@ const Dashboard: React.FC = () => {
             )}
 
             <Link
-              to="/advisor/period-attendance"
+              to={periodAttendanceUrl}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white text-sm font-semibold hover:bg-white/20 transition-all"
             >
               <Camera size={16} />
@@ -555,7 +556,7 @@ const Dashboard: React.FC = () => {
                         </div>
 
                         <Link
-                          to="/advisor/period-attendance"
+                          to={periodAttendanceUrl}
                           className="self-end sm:self-center px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white text-xs font-semibold transition-all shrink-0 border border-blue-200/60"
                         >
                           Mark Attendance
