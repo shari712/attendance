@@ -3,7 +3,6 @@ import { api } from '../lib/api';
 import * as faceapi from 'face-api.js';
 import { 
   Camera, 
-  Upload, 
   CheckCircle2, 
   AlertTriangle, 
   Clock, 
