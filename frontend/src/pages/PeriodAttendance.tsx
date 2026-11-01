@@ -68,8 +68,8 @@ const PeriodAttendance: React.FC = () => {
   const scanLockRef = useRef<boolean>(false);
 
   // Pre-loaded student sample directories in public/students
-  const studentKeys = ['student1', 'student2', 'student3'];
-  const NUM_SAMPLES_PER_STUDENT = 3;
+  const studentKeys = ['student1', 'student2', 'student3', 'student4'];
+  const NUM_SAMPLES_PER_STUDENT = 10;
 
   // 1. Fetch live timetable and students list from Supabase
   useEffect(() => {
@@ -235,6 +235,8 @@ const PeriodAttendance: React.FC = () => {
           targetStudent = availableStudents.find(s => s.register_number === 'ES24CJ12' || s.name?.includes('Harshini'));
         } else if (studentKey === 'student3') {
           targetStudent = availableStudents.find(s => s.register_number === 'ES24CJ15' || s.name?.includes('Pooja'));
+        } else if (studentKey === 'student4' || studentKey.toLowerCase().includes('lalitha') || studentKey.toLowerCase().includes('lathika')) {
+          targetStudent = availableStudents.find(s => s.register_number === 'ES24CJ17' || s.name?.includes('Lalitha') || s.email?.includes('lathika'));
         }
 
         if (!targetStudent) {
@@ -332,12 +334,18 @@ const PeriodAttendance: React.FC = () => {
           if (matchedStudentKey) {
             const studentKey = matchedStudentKey;
 
-            if (presentStudentsRef.current.has(studentKey)) {
-              showPopup(`${studentKey.toUpperCase()} is already marked present!`, 'info');
+            let displayName = studentKey.toUpperCase();
+            if (studentKey === 'student1') displayName = 'Test Student (STU001)';
+            else if (studentKey === 'student2') displayName = 'Harshini S (ES24CJ12)';
+            else if (studentKey === 'student3') displayName = 'Pooja Sri A (ES24CJ15)';
+            else if (studentKey === 'student4') displayName = 'Lalitha Shree (ES24CJ17)';
+
+            if (presentStudentsRef.current.has(displayName)) {
+              showPopup(`${displayName} is already marked present!`, 'info');
             } else {
-              presentStudentsRef.current.add(studentKey);
+              presentStudentsRef.current.add(displayName);
               setAttendanceLog(Array.from(presentStudentsRef.current));
-              logEvent(studentKey.toUpperCase(), 'Check-in', 'Verified');
+              logEvent(displayName, 'Check-in', 'Verified');
               await markAttendanceInDatabase(studentKey);
             }
           }
@@ -514,7 +522,7 @@ const PeriodAttendance: React.FC = () => {
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {availableStudents.slice(0, 3).map((stu) => (
+                  {availableStudents.slice(0, 6).map((stu) => (
                     <button
                       key={stu.id}
                       type="button"
