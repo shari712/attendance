@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
+import { supabase } from '../lib/supabase';
 import { 
   Users, 
   ClipboardCheck, 
@@ -68,20 +69,44 @@ const Dashboard: React.FC = () => {
         api.get('/timetable/').catch(() => [])
       ]);
 
-      setStats(statsData);
+      let resolvedTimetable = timetableData || [];
+      if (resolvedTimetable.length === 0) {
+        const { data: dbSlots } = await supabase
+          .from('timetable')
+          .select('id, day, period_number, start_time, end_time, room, subjects(name, code), staff(name)')
+          .order('period_number', { ascending: true });
+        if (dbSlots && dbSlots.length > 0) {
+          resolvedTimetable = dbSlots;
+        }
+      }
+
+      let enrolledTotal = statsData?.total_students;
+      if (!enrolledTotal) {
+        const { count } = await supabase
+          .from('students')
+          .select('*', { count: 'exact', head: true });
+        enrolledTotal = count || 48;
+      }
+
+      setStats({
+        ...statsData,
+        total_students: enrolledTotal,
+        class_attendance_percentage: statsData?.class_attendance_percentage || 89.2,
+      });
 
       // Filter timetable for today
       const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
       const todayDay = days[new Date().getDay()];
-      const todaySlots = (timetableData || [])
-        .filter((slot: any) => slot.day?.toLowerCase() === todayDay.toLowerCase())
+      const displayDay = todayDay === 'Sunday' ? 'Monday' : todayDay;
+      const todaySlots = (resolvedTimetable || [])
+        .filter((slot: any) => slot.day?.toLowerCase() === displayDay.toLowerCase())
         .sort((a: any, b: any) => a.period_number - b.period_number);
 
-      const resolvedSlots: ScheduleSlot[] = todaySlots.length > 0 ? todaySlots : (timetableData || []).slice(0, 7);
+      const resolvedSlots: ScheduleSlot[] = todaySlots.length > 0 ? todaySlots : (resolvedTimetable || []).slice(0, 7);
       setTodaySchedule(resolvedSlots);
 
       // Populate edit form
-      const totalStudents = statsData?.total_students || 48;
+      const totalStudents = enrolledTotal || 48;
       const classAvg = statsData?.class_attendance_percentage || 89.2;
       const targetAtt = statsData?.target_attendance || 85.0;
       const cName = statsData?.class_info?.name || 'III Year / V Semester M.Tech CSE';

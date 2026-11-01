@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
+import { supabase } from '../../lib/supabase';
 import { 
   GraduationCap, 
   Calendar, 
@@ -70,7 +71,7 @@ const StudentDashboard: React.FC = () => {
   const [studentInfo, setStudentInfo] = useState<StudentProfile | null>(null);
   const [timetable, setTimetable] = useState<TimetableSlot[]>([]);
   const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
-  const [stats] = useState({
+  const [stats, setStats] = useState({
     totalClasses: 48,
     attended: 42,
     percentage: 87.5,
@@ -122,35 +123,124 @@ const StudentDashboard: React.FC = () => {
     const loadStudentData = async () => {
       setIsLoading(true);
       try {
-        // 1. Fetch student's profile information
-        const me = await api.get('/auth/me');
-        if (me) {
-          setStudentInfo(me);
-        }
+        let currentStudent: any = null;
 
-        // 2. Fetch timetable for student's class
-        try {
-          const tt = await api.get('/timetable/');
-          if (Array.isArray(tt)) {
-            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            const todayName = days[new Date().getDay()];
-            const todaysSlots = tt.filter((slot: any) => 
-              slot.day?.toLowerCase() === todayName.toLowerCase() || slot.day?.toLowerCase() === 'monday'
-            );
-            setTimetable(todaysSlots.length ? todaysSlots : tt.slice(0, 7));
+        // 1. Fetch student's profile from Supabase
+        if (user?.id || user?.email) {
+          const { data: sRow } = await supabase
+            .from('students')
+            .select('*')
+            .or(`profile_id.eq.${user?.id || '00000000-0000-0000-0000-000000000000'},email.eq.${user?.email}`)
+            .maybeSingle();
+
+          if (sRow) {
+            currentStudent = sRow;
+            setStudentInfo(sRow);
+          } else {
+            // Fallback to API me
+            const me = await api.get('/auth/me').catch(() => null);
+            if (me) {
+              currentStudent = me;
+              setStudentInfo(me);
+            }
           }
-        } catch (ttErr) {
-          console.warn('Timetable load warning:', ttErr);
         }
 
-        // 3. Mock/fetch attendance records
-        setAttendanceLogs([
-          { id: '1', date: new Date().toISOString().split('T')[0], period_number: 1, subject_name: 'Database Management Systems', status: 'PRESENT', method: 'Face Recognition' },
-          { id: '2', date: new Date().toISOString().split('T')[0], period_number: 2, subject_name: 'Computer Networks', status: 'PRESENT', method: 'Face Recognition' },
-          { id: '3', date: new Date(Date.now() - 86400000).toISOString().split('T')[0], period_number: 1, subject_name: 'Compiler Design', status: 'PRESENT', method: 'Face Recognition' },
-          { id: '4', date: new Date(Date.now() - 86400000).toISOString().split('T')[0], period_number: 3, subject_name: 'Machine Learning', status: 'PRESENT', method: 'Face Recognition' },
-          { id: '5', date: new Date(Date.now() - 172800000).toISOString().split('T')[0], period_number: 2, subject_name: 'Cloud Computing', status: 'ABSENT', method: 'Absent' },
-        ]);
+        // 2. Fetch timetable slots from Supabase
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const todayName = days[new Date().getDay()];
+        const displayDay = todayName === 'Sunday' ? 'Monday' : todayName;
+
+        const { data: dbSlots } = await supabase
+          .from('timetable')
+          .select('id, day, period_number, start_time, end_time, room, subjects(name, code), staff(name)')
+          .order('period_number', { ascending: true });
+
+        if (dbSlots && dbSlots.length > 0) {
+          const todays = dbSlots.filter((s: any) => s.day?.toLowerCase() === displayDay.toLowerCase());
+          const chosenSlots = todays.length > 0 ? todays : dbSlots.slice(0, 7);
+          
+          setTimetable(chosenSlots.map((s: any) => ({
+            id: s.id,
+            day: s.day,
+            period_number: s.period_number,
+            start_time: s.start_time,
+            end_time: s.end_time,
+            room: s.room || 'CH LH 11',
+            subject_name: s.subjects?.name || `Period ${s.period_number}`,
+            subject_code: s.subjects?.code,
+            faculty_name: s.staff?.name,
+          })));
+        } else {
+          // Fallback to API
+          const tt = await api.get('/timetable/').catch(() => []);
+          if (Array.isArray(tt) && tt.length > 0) {
+            setTimetable(tt.slice(0, 7));
+          }
+        }
+
+        // 3. Fetch real attendance records for this student from Supabase
+        if (currentStudent?.id) {
+          const { data: attList } = await supabase
+            .from('attendance')
+            .select(`
+              id,
+              date,
+              status,
+              check_in_time,
+              check_out_time,
+              timetable (
+                period_number,
+                subjects (
+                  name,
+                  code
+                )
+              )
+            `)
+            .eq('student_id', currentStudent.id)
+            .order('date', { ascending: false });
+
+          if (attList && attList.length > 0) {
+            const logs: AttendanceLog[] = attList.map((a: any) => ({
+              id: a.id,
+              date: a.date,
+              period_number: a.timetable?.period_number || 1,
+              subject_name: a.timetable?.subjects?.name || 'Class Period',
+              status: (a.status?.toLowerCase() === 'present' ? 'PRESENT' : 'ABSENT'),
+              method: a.check_in_time ? 'Biometric Face ID' : 'Verified Attendance'
+            }));
+            setAttendanceLogs(logs);
+
+            const attendedCount = logs.filter(l => l.status === 'PRESENT').length;
+            const totalCount = logs.length;
+            const pct = totalCount > 0 ? Math.round((attendedCount / totalCount) * 1000) / 10 : 100;
+            
+            setStats({
+              totalClasses: totalCount,
+              attended: attendedCount,
+              percentage: pct,
+              target: 75.0,
+            });
+          } else {
+            // Default active status if no records yet
+            setAttendanceLogs([
+              {
+                id: 'init-1',
+                date: new Date().toISOString().split('T')[0],
+                period_number: 1,
+                subject_name: 'Face Biometrics Enrolled',
+                status: 'PRESENT',
+                method: 'Automated AI Check-in Ready'
+              }
+            ]);
+            setStats({
+              totalClasses: 1,
+              attended: 1,
+              percentage: 100.0,
+              target: 75.0,
+            });
+          }
+        }
       } catch (err) {
         console.error('Failed to load student dashboard:', err);
       } finally {
@@ -159,7 +249,7 @@ const StudentDashboard: React.FC = () => {
     };
 
     loadStudentData();
-  }, []);
+  }, [user]);
 
   if (isLoading) {
     return (

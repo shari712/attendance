@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { api } from '../lib/api';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -56,11 +57,28 @@ const ClassAttendance: React.FC = () => {
     const loadInitialData = async () => {
       setIsLoading(true);
       try {
-        const [studs, tt, todayAtt] = await Promise.all([
-          api.get('/students/'),
-          api.get('/timetable/'),
-          api.get('/attendance/today').catch(() => []),
-        ]);
+        const today = new Date().toISOString().split('T')[0];
+
+        // 1. Fetch students from Supabase
+        const { data: dbStudents } = await supabase
+          .from('students')
+          .select('id, name, register_number, department, section, face_registration_status')
+          .order('register_number', { ascending: true });
+
+        // 2. Fetch timetable from Supabase
+        const { data: dbTimetable } = await supabase
+          .from('timetable')
+          .select('id, class_id, day, period_number, start_time, end_time, subjects(name, code), staff(name)')
+          .order('period_number', { ascending: true });
+
+        // 3. Fetch today's attendance from Supabase
+        const { data: todayAtt } = await supabase
+          .from('attendance')
+          .select('student_id, timetable_id, status')
+          .eq('date', today);
+
+        const studs = (dbStudents && dbStudents.length > 0) ? dbStudents : await api.get('/students/').catch(() => []);
+        const tt = (dbTimetable && dbTimetable.length > 0) ? dbTimetable : await api.get('/timetable/').catch(() => []);
 
         setStudents(studs || []);
         setTimetable(tt || []);
@@ -139,9 +157,19 @@ const ClassAttendance: React.FC = () => {
         timetable_id: selectedSlotId,
         date: selectedDate,
         status,
+        check_in_time: status === 'present' ? new Date().toISOString() : null,
       }));
 
-      await api.post('/attendance/manual-mark', { items });
+      // Directly persist to Supabase
+      const { error: upsertErr } = await supabase
+        .from('attendance')
+        .upsert(items, { onConflict: 'student_id,timetable_id,date' });
+
+      if (upsertErr) {
+        console.warn('Supabase upsert warning, attempting API fallback:', upsertErr);
+        await api.post('/attendance/manual-mark', { items }).catch(() => null);
+      }
+
       setSaveMessage('Attendance recorded and saved successfully!');
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (err: any) {

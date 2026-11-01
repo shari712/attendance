@@ -228,18 +228,25 @@ const PeriodAttendance: React.FC = () => {
       const now = new Date().toISOString();
 
       let targetStudent = specificStudent;
-      if (!targetStudent && availableStudents.length > 0) {
-        if (studentKey === 'student1') {
-          targetStudent = availableStudents.find(s => s.register_number === 'STU001' || s.email?.includes('student1'));
-        } else if (studentKey === 'student2') {
-          targetStudent = availableStudents.find(s => s.register_number === 'ES24CJ12' || s.name?.includes('Harshini'));
-        } else if (studentKey === 'student3') {
-          targetStudent = availableStudents.find(s => s.register_number === 'ES24CJ15' || s.name?.includes('Pooja'));
-        } else if (studentKey === 'student4' || studentKey.toLowerCase().includes('lalitha') || studentKey.toLowerCase().includes('lathika')) {
-          targetStudent = availableStudents.find(s => s.register_number === 'ES24CJ17' || s.name?.includes('Lalitha') || s.email?.includes('lathika'));
-        }
+      if (!targetStudent) {
+        let regNo = '';
+        if (studentKey === 'student1') regNo = 'STU001';
+        else if (studentKey === 'student2') regNo = 'ES24CJ12';
+        else if (studentKey === 'student3') regNo = 'ES24CJ15';
+        else if (studentKey === 'student4' || studentKey.toLowerCase().includes('lalitha') || studentKey.toLowerCase().includes('lathika')) regNo = 'ES24CJ17';
 
-        if (!targetStudent) {
+        if (availableStudents.length > 0 && regNo) {
+          targetStudent = availableStudents.find(s => s.register_number === regNo);
+        }
+        if (!targetStudent && regNo) {
+          const { data: sRow } = await supabase
+            .from('students')
+            .select('id, name, register_number, email')
+            .eq('register_number', regNo)
+            .maybeSingle();
+          if (sRow) targetStudent = sRow;
+        }
+        if (!targetStudent && availableStudents.length > 0) {
           targetStudent = availableStudents[0];
         }
       }
@@ -248,8 +255,19 @@ const PeriodAttendance: React.FC = () => {
       const studentId = targetStudent?.id;
 
       let slotId = selectedSlotId;
-      if ((!slotId || slotId === 'slot-default') && timetable.length > 0 && timetable[0].id !== 'slot-default') {
-        slotId = timetable[0].id;
+      if (!slotId || slotId === 'slot-default') {
+        if (timetable.length > 0 && timetable[0].id !== 'slot-default') {
+          slotId = timetable[0].id;
+        } else {
+          const { data: firstSlot } = await supabase
+            .from('timetable')
+            .select('id')
+            .limit(1)
+            .maybeSingle();
+          if (firstSlot?.id) {
+            slotId = firstSlot.id;
+          }
+        }
       }
 
       if (studentId && slotId && slotId !== 'slot-default') {
@@ -262,16 +280,21 @@ const PeriodAttendance: React.FC = () => {
           .maybeSingle();
 
         if (existing) {
-          await supabase
+          const { error: updErr } = await supabase
             .from('attendance')
             .update({
               check_out_time: now,
               status: 'present'
             })
             .eq('id', existing.id);
-          showPopup(`Updated check-out for ${studentNameDisplay}`, 'info');
+          if (updErr) {
+            console.error('Update attendance error:', updErr);
+            showPopup(`Attendance update error: ${updErr.message}`, 'error');
+          } else {
+            showPopup(`Updated check-out for ${studentNameDisplay}`, 'info');
+          }
         } else {
-          await supabase
+          const { error: insErr } = await supabase
             .from('attendance')
             .insert({
               student_id: studentId,
@@ -280,7 +303,12 @@ const PeriodAttendance: React.FC = () => {
               check_in_time: now,
               status: 'present'
             });
-          showPopup(`✓ Attendance marked PRESENT for ${studentNameDisplay}`, 'success');
+          if (insErr) {
+            console.error('Insert attendance error:', insErr);
+            showPopup(`Attendance save error: ${insErr.message}`, 'error');
+          } else {
+            showPopup(`✓ Attendance marked PRESENT for ${studentNameDisplay}`, 'success');
+          }
         }
       } else {
         showPopup(`✓ Verified: ${studentNameDisplay}`, 'success');

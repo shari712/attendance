@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Webcam from 'react-webcam';
 import * as faceapi from 'face-api.js';
+import { supabase } from '../lib/supabase';
 
 const Attendance: React.FC = () => {
   const webcamRef = useRef<Webcam>(null);
@@ -14,8 +15,8 @@ const Attendance: React.FC = () => {
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [scanError, setScanError] = useState<string | null>(null);
 
-  const students = ['student1', 'student2', 'student3'];
-  const NUM_SAMPLES_PER_STUDENT = 3; 
+  const students = ['student1', 'student2', 'student3', 'student4'];
+  const NUM_SAMPLES_PER_STUDENT = 10; 
 
   useEffect(() => {
     const loadModelsAndData = async () => {
@@ -97,11 +98,49 @@ const Attendance: React.FC = () => {
     }
   };
 
-  const markPresent = (studentName: string) => {
+  const markPresent = async (studentName: string) => {
+    let displayName = studentName.toUpperCase();
+    let regNo = '';
+    if (studentName === 'student1') { displayName = 'Test Student (STU001)'; regNo = 'STU001'; }
+    else if (studentName === 'student2') { displayName = 'Harshini S (ES24CJ12)'; regNo = 'ES24CJ12'; }
+    else if (studentName === 'student3') { displayName = 'Pooja Sri A (ES24CJ15)'; regNo = 'ES24CJ15'; }
+    else if (studentName === 'student4') { displayName = 'Lalitha Shree (ES24CJ17)'; regNo = 'ES24CJ17'; }
+
     setAttendanceLog((prev) => {
-      if (!prev.includes(studentName)) return [...prev, studentName];
+      if (!prev.includes(displayName)) return [...prev, displayName];
       return prev;
     });
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const now = new Date().toISOString();
+
+      const { data: stu } = await supabase
+        .from('students')
+        .select('id')
+        .eq('register_number', regNo)
+        .maybeSingle();
+
+      const { data: slot } = await supabase
+        .from('timetable')
+        .select('id')
+        .limit(1)
+        .maybeSingle();
+
+      if (stu?.id && slot?.id) {
+        await supabase
+          .from('attendance')
+          .upsert({
+            student_id: stu.id,
+            timetable_id: slot.id,
+            date: today,
+            check_in_time: now,
+            status: 'present'
+          }, { onConflict: 'student_id,timetable_id,date' });
+      }
+    } catch (err) {
+      console.warn('Error saving attendance in Supabase:', err);
+    }
   };
 
   useEffect(() => {

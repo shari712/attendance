@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { api } from '../lib/api';
+import { supabase } from '../lib/supabase';
 import { 
   Search, 
   Download, 
@@ -42,8 +43,36 @@ const AttendanceHistory: React.FC = () => {
     const fetchHistory = async () => {
       setIsLoading(true);
       try {
-        const data = await api.get('/attendance/history');
-        setLogs(data || []);
+        const { data: attData } = await supabase
+          .from('attendance')
+          .select(`
+            id,
+            student_id,
+            timetable_id,
+            date,
+            status,
+            check_in_time,
+            check_out_time,
+            students (
+              name,
+              register_number
+            ),
+            timetable (
+              period_number,
+              subjects (
+                name,
+                code
+              )
+            )
+          `)
+          .order('date', { ascending: false });
+
+        if (attData && attData.length > 0) {
+          setLogs(attData as any);
+        } else {
+          const data = await api.get('/attendance/history').catch(() => []);
+          setLogs(data || []);
+        }
       } catch (err) {
         console.error('Failed to load history:', err);
       } finally {
