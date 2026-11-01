@@ -45,7 +45,7 @@ const Attendance: React.FC = () => {
       );
 
       const validDescriptors = labeledDescriptors.filter((desc): desc is faceapi.LabeledFaceDescriptors => desc !== null);
-      setFaceMatcher(new faceapi.FaceMatcher(validDescriptors, 0.6)); 
+      setFaceMatcher(new faceapi.FaceMatcher(validDescriptors, 0.45)); 
       setIsModelLoaded(true);
     };
 
@@ -101,10 +101,11 @@ const Attendance: React.FC = () => {
   const markPresent = async (studentName: string) => {
     let displayName = studentName.toUpperCase();
     let regNo = '';
-    if (studentName === 'student1') { displayName = 'Test Student (STU001)'; regNo = 'STU001'; }
-    else if (studentName === 'student2') { displayName = 'Harshini S (ES24CJ12)'; regNo = 'ES24CJ12'; }
-    else if (studentName === 'student3') { displayName = 'Pooja Sri A (ES24CJ15)'; regNo = 'ES24CJ15'; }
+    if (studentName === 'student1') { displayName = 'Harshini S (ES24CJ12)'; regNo = 'ES24CJ12'; }
+    else if (studentName === 'student2') { displayName = 'Pooja Sri A (ES24CJ15)'; regNo = 'ES24CJ15'; }
+    else if (studentName === 'student3') { displayName = 'Dharani S (ES24CJ08)'; regNo = 'ES24CJ08'; }
     else if (studentName === 'student4') { displayName = 'Lalitha Shree (ES24CJ17)'; regNo = 'ES24CJ17'; }
+    else if (studentName === 'student5') { displayName = 'Test Student (STU001)'; regNo = 'STU001'; }
 
     setAttendanceLog((prev) => {
       if (!prev.includes(displayName)) return [...prev, displayName];

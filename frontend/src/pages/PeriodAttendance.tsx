@@ -158,8 +158,8 @@ const PeriodAttendance: React.FC = () => {
         const validDescriptors = labeledDescriptors.filter((desc): desc is faceapi.LabeledFaceDescriptors => desc !== null);
         
         if (validDescriptors.length > 0) {
-          // Distance threshold: 0.6 (standard for euclidean distance)
-          setFaceMatcher(new faceapi.FaceMatcher(validDescriptors, 0.6));
+          // Distance threshold: 0.45 (strict threshold to prevent cross-matching between students)
+          setFaceMatcher(new faceapi.FaceMatcher(validDescriptors, 0.45));
         }
 
         setIsModelLoaded(true);
@@ -230,10 +230,11 @@ const PeriodAttendance: React.FC = () => {
       let targetStudent = specificStudent;
       if (!targetStudent) {
         let regNo = '';
-        if (studentKey === 'student1') regNo = 'STU001';
-        else if (studentKey === 'student2') regNo = 'ES24CJ12';
-        else if (studentKey === 'student3') regNo = 'ES24CJ15';
-        else if (studentKey === 'student4' || studentKey.toLowerCase().includes('lalitha') || studentKey.toLowerCase().includes('lathika')) regNo = 'ES24CJ17';
+        if (studentKey === 'student1') regNo = 'ES24CJ12'; // Harshini S
+        else if (studentKey === 'student2') regNo = 'ES24CJ15'; // Pooja Sri A
+        else if (studentKey === 'student3') regNo = 'ES24CJ08'; // Dharani S
+        else if (studentKey === 'student4' || studentKey.toLowerCase().includes('lalitha') || studentKey.toLowerCase().includes('lathika')) regNo = 'ES24CJ17'; // Lalitha Shree
+        else if (studentKey === 'student5') regNo = 'STU001'; // Test Student
 
         if (availableStudents.length > 0 && regNo) {
           targetStudent = availableStudents.find(s => s.register_number === regNo);
@@ -363,10 +364,11 @@ const PeriodAttendance: React.FC = () => {
             const studentKey = matchedStudentKey;
 
             let displayName = studentKey.toUpperCase();
-            if (studentKey === 'student1') displayName = 'Test Student (STU001)';
-            else if (studentKey === 'student2') displayName = 'Harshini S (ES24CJ12)';
-            else if (studentKey === 'student3') displayName = 'Pooja Sri A (ES24CJ15)';
+            if (studentKey === 'student1') displayName = 'Harshini S (ES24CJ12)';
+            else if (studentKey === 'student2') displayName = 'Pooja Sri A (ES24CJ15)';
+            else if (studentKey === 'student3') displayName = 'Dharani S (ES24CJ08)';
             else if (studentKey === 'student4') displayName = 'Lalitha Shree (ES24CJ17)';
+            else if (studentKey === 'student5') displayName = 'Test Student (STU001)';
 
             if (presentStudentsRef.current.has(displayName)) {
               showPopup(`${displayName} is already marked present!`, 'info');
@@ -562,7 +564,7 @@ const PeriodAttendance: React.FC = () => {
                       }}
                       className="px-2.5 py-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm transition-all"
                     >
-                      ✓ Mark {stu.register_number}
+                      ✓ Mark {stu.name ? stu.name.split(' ')[0] : stu.register_number}
                     </button>
                   ))}
                 </div>
