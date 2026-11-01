@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+supabase
+face_recognition
+opencv-python-headless
+python-multipart
+python-dotenv
+pydantic
+numpy
